@@ -7,7 +7,7 @@ databases=`$MYSQL --user=$MYSQL_USER -p$MYSQL_PASSWORD -e "SHOW DATABASES;" | gr
 for db in $databases; do
 	$MYSQLDUMP --force --opt --user=$MYSQL_USER -p$MYSQL_PASSWORD --databases $db | 7z a -si -m0=lzma -mx=1 -p"$ARCHIVE_PASSWORD" $BACKUP_DIR/mysql/$db.7z
 	/usr/sbin/rclone move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
-	rm -rf $BACKUP_DIR/mysql/$db.gz
+	rm $BACKUP_DIR/mysql/$db.gz
 done
 
 echo "Finished Backup Database";
@@ -21,7 +21,7 @@ for D in /var/www/*; do
 		echo "-- Starting backup "$domain;
 		LC_ALL=en_US.UTF-8 7z a -m0=lzma -mx=1 -y -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/$domain.7z /var/www/$domain/htdocs/*
     	        /usr/sbin/rclone move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
-    	        rm -rf $BACKUP_DIR/$domain.7z
+    	        rm $BACKUP_DIR/$domain.7z
 		echo "-- Backup done "$domain;
 	fi
 done
