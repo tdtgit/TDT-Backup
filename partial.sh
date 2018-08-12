@@ -5,7 +5,7 @@ echo "Starting Backup Database";
 databases=`$MYSQL --user=$MYSQL_USER -p$MYSQL_PASSWORD -e "SHOW DATABASES;" | grep -Ev "(Database|information_schema|performance_schema|mysql)"`
 
 for db in $databases; do
-	$MYSQLDUMP --force --opt --user=$MYSQL_USER -p$MYSQL_PASSWORD --databases $db | 7z a -si -p"$ARCHIVE_PASSWORD" $BACKUP_DIR/mysql/$db.7z
+	$MYSQLDUMP --force --opt --user=$MYSQL_USER -p$MYSQL_PASSWORD --databases $db | 7z a -si -m0=brotli -mx1 -mmt=256 -p"$ARCHIVE_PASSWORD" $BACKUP_DIR/mysql/$db.7z
 	/usr/sbin/rclone move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
 	rm -rf $BACKUP_DIR/mysql/$db.gz
 done
@@ -19,9 +19,9 @@ for D in /var/www/*; do
 	if [ -d "${D}" ]; then
 		domain=${D##*/}
 		echo "-- Starting backup "$domain;
-		LC_ALL=en_US.UTF-8 7z a -y -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/$domain.7z /var/www/$domain/htdocs/*
-    	/usr/sbin/rclone move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
-    	rm -rf $BACKUP_DIR/$domain.7z
+		LC_ALL=en_US.UTF-8 7z a -m0=brotli -mx1 -mmt=256 -y -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/$domain.7z /var/www/$domain/htdocs/*
+    	        /usr/sbin/rclone move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
+    	        rm -rf $BACKUP_DIR/$domain.7z
 		echo "-- Backup done "$domain;
 	fi
 done
