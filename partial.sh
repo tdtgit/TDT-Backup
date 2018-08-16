@@ -1,3 +1,8 @@
+if [ -z "$BACKUP_DIR" ]; then
+	echo "Wrong config! Please check again."
+	exit 1
+fi
+
 ################# MySQL Backup #################
 mkdir -p "$BACKUP_DIR/databases"
 
@@ -32,13 +37,6 @@ rsync -zarv --exclude .git/ --exclude .gitignore --exclude TODO /etc/nginx/ $BAC
 $(which rclone) move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
 echo "Finished Backup Nginx Configuration";
 echo '-------------------------------------';
-
-if [ -z "$BACKUP_DIR" ]
-then
-      echo "Error"
-else
-      rm -rf $BACKUP_DIR
-fi
 
 #$(which rclone) -q --min-age 6m delete "$REMOTE:$SERVER_NAME" #Remove all backups older than 2 week
 #$(which rclone) -q --min-age 6m rmdirs "$REMOTE:$SERVER_NAME" #Remove all empty folders older than 2 week
