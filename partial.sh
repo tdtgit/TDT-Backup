@@ -7,7 +7,7 @@ databases=`$MYSQL --user=$MYSQL_USER -p$MYSQL_PASSWORD -e "SHOW DATABASES;" | gr
 for db in $databases; do
 	$MYSQLDUMP --force --opt --user=$MYSQL_USER -p$MYSQL_PASSWORD --databases $db | 7z a -si -m0=lzma -mx=1 -p"$ARCHIVE_PASSWORD" $BACKUP_DIR/databases/$db.7z
 	/usr/sbin/rclone move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
-	rm $BACKUP_DIR/databases/$db.gz
+	rm $BACKUP_DIR/databases/$db.7z
 done
 
 echo "Finished Backup Database";
