@@ -1,13 +1,13 @@
 ################# MySQL Backup #################
-mkdir -p "$BACKUP_DIR/mysql"
+mkdir -p "$BACKUP_DIR/databases"
 
 echo "Starting Backup Database";
 databases=`$MYSQL --user=$MYSQL_USER -p$MYSQL_PASSWORD -e "SHOW DATABASES;" | grep -Ev "(Database|information_schema|performance_schema|mysql)"`
 
 for db in $databases; do
-	$MYSQLDUMP --force --opt --user=$MYSQL_USER -p$MYSQL_PASSWORD --databases $db | 7z a -si -m0=lzma -mx=1 -p"$ARCHIVE_PASSWORD" $BACKUP_DIR/mysql/$db.7z
+	$MYSQLDUMP --force --opt --user=$MYSQL_USER -p$MYSQL_PASSWORD --databases $db | 7z a -si -m0=lzma -mx=1 -p"$ARCHIVE_PASSWORD" $BACKUP_DIR/databases/$db.7z
 	/usr/sbin/rclone move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
-	rm $BACKUP_DIR/mysql/$db.gz
+	rm $BACKUP_DIR/databases/$db.gz
 done
 
 echo "Finished Backup Database";
