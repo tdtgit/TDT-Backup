@@ -40,3 +40,5 @@ echo '-------------------------------------';
 
 #$(which rclone) -q --min-age 6m delete "$REMOTE:$SERVER_NAME" #Remove all backups older than 2 week
 #$(which rclone) -q --min-age 6m rmdirs "$REMOTE:$SERVER_NAME" #Remove all empty folders older than 2 week
+
+rm -rf $BACKUP_DIR
