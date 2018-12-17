@@ -21,6 +21,7 @@ echo '-------------------------------------';
 ################# Website Backup #################
 echo "Starting Backup Website";
 for D in /var/www/*; do
+    [[ $(basename $D) =~ ^(22222|html)$ ]] && continue
     if [ -d "${D}" ]; then
         domain=${D##*/}
         echo "-- Starting backup "$domain;
