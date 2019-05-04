@@ -18,6 +18,26 @@ function _e {
     echo -e "\e[${COLOR}m  $1\e[0m"
 }
 
+function _en {
+    case $2 in
+        success) COLOR=32 ;;
+        warning) COLOR=33 ;;
+        error) COLOR=31 ;;
+        *) COLOR="" ;;
+    esac
+    echo -ne "\e[${COLOR}m$1\e[0m"
+}
+
+function _p {
+    eval $1 & PID=$!
+
+    _en "  $2" "$3"
+    while kill -0 $PID 2> /dev/null; do 
+        _en "."
+        sleep 1
+    done
+}
+
 function setup {
     # TODO: advanced options: temporary backup dir,...
     source .env &>/dev/null || echo -e "\n\nNew setup detected. Please provide all information you can:"
@@ -164,11 +184,13 @@ function run {
 
     for db in $databases; do
         # TODO progress bar
-        mysqldump --force --opt --user=$TB_MYSQL_USER -p$TB_MYSQL_PASSWORD --databases $db | 7z a -si -m0=lzma -mx=1 $TB_ARCHIVE_PASSWORD $db.sql.7z > /dev/null && \
-        rclone move $db.sql.7z "$TB_RCLONE_NAME:$TB_GDRIVE_DIR/$TIMESTAMP/databases"
+        _e "\n- $db: ";
+        _p "mysqldump --force --opt --user=${TB_MYSQL_USER} -p${TB_MYSQL_PASSWORD} --databases ${db} | 7z a -si -m0=lzma -mx=1 ${TB_ARCHIVE_PASSWORD} ${db}.sql.7z > /dev/null" "Processing" "success"
+        _p "rclone move $db.sql.7z $TB_RCLONE_NAME:$TB_GDRIVE_DIR/$TIMESTAMP/databases" "Uploading" "success"
+        _en "  Done" "success"
     done
 
-    echo "Finished Backup Database";
+    echo -e "\n\nFinished Backup Database";
     echo -e '===================================';
 }
 
