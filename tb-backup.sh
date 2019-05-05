@@ -51,7 +51,7 @@ MYSQL_USER=root
 MYSQL_PASSWORD=$(cat /etc/mysql/conf.d/my.cnf | awk 'BEGIN{a=1}{if($1=="password"){print $3}}')
 ARCHIVE_PASSWORD=tbbackup
 GDRIVE_DIR=Backup/Rclone/$(hostname)-$(ip route get 8.8.8.8| head -1 | awk '{print $7}')
-RCLONE_NAME=gdrive
+RCLONE_NAME=0
 TEMP_DIR=/tmp/tb-backup" \
         > .env.default
 
@@ -76,9 +76,10 @@ TEMP_DIR=/tmp/tb-backup" \
 
         read -ep "  We will backup the following sites, is it ok? (Y/n): " CONTINUE;
         if [ -z "$CONTINUE" ]; then
-            [ ! -z "$TB_SOURCE_DIR" ] && CONTINUE="Y"
+            [ ! -z "$SOURCE_DIR" ] && CONTINUE="Y"
         fi
         until [ $CONTINUE = "Y" ]; do
+            _e "\n";
             listSites;
         done
     }
@@ -86,6 +87,7 @@ TEMP_DIR=/tmp/tb-backup" \
     listSites
 
     function mysqlConnect {
+        _e "\n"
         read -ep "Provide your MySQL username $([ ! -z "$TB_MYSQL_USER" ] && echo [$TB_MYSQL_USER] || echo [$MYSQL_USER]): " INPUT_MYSQL_USER;
         if [ -z "$INPUT_MYSQL_USER" ]; then
             [ ! -z "$TB_MYSQL_USER" ] && MYSQL_USER=$TB_MYSQL_USER
@@ -104,11 +106,11 @@ TEMP_DIR=/tmp/tb-backup" \
     mysqlConnect
 
     until mysql -u $MYSQL_USER -p$MYSQL_PASSWORD -e ";" ; do
-        _e "\n  Can not connect MySQL, please check your information.\n" "error";
+        _e "Can not connect MySQL, please check your information." "error";
         mysqlConnect
     done
 
-    _e "\n  Connect to MySQL successfully.\n" "success";
+    _e "Connect to MySQL successfully.\n\n" "success";
 
     read -p "Provide your archive password (optional) $([ ! -z "$TB_ARCHIVE_PASSWORD" ] && echo [$TB_ARCHIVE_PASSWORD] || echo [$ARCHIVE_PASSWORD]): " INPUT_ARCHIVE_PASSWORD;
     if [ -z "$INPUT_ARCHIVE_PASSWORD" ]; then
@@ -118,6 +120,7 @@ TEMP_DIR=/tmp/tb-backup" \
     fi
 
     function rcloneConnect {
+        _e "\n"
         read -p "Provide your Rclone remote name (0 to store backup locally) $([ ! -z "$TB_RCLONE_NAME" ] && echo [$TB_RCLONE_NAME] || echo [$RCLONE_NAME]): " INPUT_RCLONE_NAME;
         if [ -z "$INPUT_RCLONE_NAME" ]; then
             [ ! -z "$TB_RCLONE_NAME" ] && RCLONE_NAME=$TB_RCLONE_NAME
@@ -129,15 +132,15 @@ TEMP_DIR=/tmp/tb-backup" \
     rcloneConnect
 
     if [ $RCLONE_NAME = "0" ]; then
-        _e "\n  We will store your backup locally.\n" "success";
+        _e "We will store your backup locally." "success";
     else
         until rclone ls $RCLONE_NAME: --max-depth 1; do
-            _e "\n  Can not connect Google Drive, please check your information.\n" "error";
+            _e "Can not connect Google Drive, please check your information." "error";
             rcloneConnect
         done
+        _e "Connect to Google Drive successfully" "success";
 
-         _e "\n  Connect to Google Drive successfully\n" "success";
-
+        _e "\n"
         read -p "Provide your Google Drive backup directory $([ ! -z "$TB_GDRIVE_DIR" ] && echo [$TB_GDRIVE_DIR] || echo [$GDRIVE_DIR]): " INPUT_GDRIVE_DIR;
         if [ -z "$INPUT_GDRIVE_DIR" ]; then
             [ ! -z "$TB_GDRIVE_DIR" ] && GDRIVE_DIR=$TB_GDRIVE_DIR
@@ -146,6 +149,8 @@ TEMP_DIR=/tmp/tb-backup" \
         fi
     fi
 
+    _e "\n"
+
     read -p "Provide your temporary backup path $([ ! -z "$TB_TEMP_DIR" ] && echo [$TB_TEMP_DIR] || echo [$TEMP_DIR]): " INPUT_TEMP_DIR;
     if [ -z "$INPUT_TEMP_DIR" ]; then
         [ ! -z "$TB_TEMP_DIR" ] && TEMP_DIR=$TB_TEMP_DIR
@@ -153,7 +158,7 @@ TEMP_DIR=/tmp/tb-backup" \
         TEMP_DIR=$INPUT_TEMP_DIR
     fi
 
-    _e "\nAll done. Now you can run 'tbackup run' to see it in action.\n" "success";
+    _e "\n\nAll done. Now you can run 'tbackup run' to see it in action." "success";
 
     echo \
 "$(echo TB_SOURCE_DIR)=$SOURCE_DIR
