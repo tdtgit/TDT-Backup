@@ -6,7 +6,7 @@ clear; echo -e "\n\n\e[37m
    ██║   ██║  ██║   ██║       ██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝
    ██║   ██║  ██║   ██║       ██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝
    ██║   ██████╔╝   ██║       ██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║
-   ╚═╝   ╚═════╝    ╚═╝       ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝ \e[0m"
+   ╚═╝   ╚═════╝    ╚═╝       ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝\e[0m"
 
 function _e {
     case $2 in
@@ -34,19 +34,19 @@ function _p {
     _en "  $2" "$3"
     while kill -0 $PID 2> /dev/null; do 
         _en "."
-        sleep 1
+        sleep 2
     done
 }
 
 function setup {
     # TODO: advanced options: temporary backup dir,...
-    source .env &>/dev/null || echo -e "\n\nNew setup detected. Please provide all information you can:"
+    source .env &>/dev/null || _e "\n\nWelcome! New setup detected. Please provide as much information as you can:\n\n" "success"
 
     # If is first run
     if [ ! -f .env.default ]; then
         # Try to self-help
         echo \
-"SOURCE_DIR=/var/www/
+"SOURCE_DIR=/var/www
 MYSQL_USER=root
 MYSQL_PASSWORD=$(cat /etc/mysql/conf.d/my.cnf | awk 'BEGIN{a=1}{if($1=="password"){print $3}}')
 ARCHIVE_PASSWORD=tbbackup
@@ -61,6 +61,29 @@ TEMP_DIR=/tmp/tb-backup" \
     source .env.default
 
     [ -f .env ] && _e "\n\nCurrent settings exists. Please be careful when you config new settings.\n\n" "warning";
+
+    function listSites {
+        read -ep "Provide your website root directory (can be /var/www or /home) $([ ! -z "$TB_SOURCE_DIR" ] && echo [$TB_SOURCE_DIR] || echo [$SOURCE_DIR]): " INPUT_SOURCE_DIR;
+        if [ -z "$INPUT_SOURCE_DIR" ]; then
+            [ ! -z "$TB_SOURCE_DIR" ] && SOURCE_DIR=$TB_SOURCE_DIR
+        else
+            SOURCE_DIR=$INPUT_SOURCE_DIR
+        fi
+
+        for D in $SOURCE_DIR/*; do
+            _e "- $(basename $D)"
+        done
+
+        read -ep "  We will backup the following sites, is it ok? (Y/n): " CONTINUE;
+        if [ -z "$CONTINUE" ]; then
+            [ ! -z "$TB_SOURCE_DIR" ] && CONTINUE="Y"
+        fi
+        until [ $CONTINUE = "Y" ]; do
+            listSites;
+        done
+    }
+
+    listSites
 
     function mysqlConnect {
         read -ep "Provide your MySQL username $([ ! -z "$TB_MYSQL_USER" ] && echo [$TB_MYSQL_USER] || echo [$MYSQL_USER]): " INPUT_MYSQL_USER;
