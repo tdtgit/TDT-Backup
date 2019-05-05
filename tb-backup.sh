@@ -94,15 +94,8 @@ TEMP_DIR=/tmp/tb-backup" \
         ARCHIVE_PASSWORD=$INPUT_ARCHIVE_PASSWORD
     fi
 
-    read -p "Provide your Google Drive backup directory $([ ! -z "$TB_GDRIVE_DIR" ] && echo [$TB_GDRIVE_DIR] || echo [$GDRIVE_DIR]): " INPUT_GDRIVE_DIR;
-    if [ -z "$INPUT_GDRIVE_DIR" ]; then
-        [ ! -z "$TB_GDRIVE_DIR" ] && GDRIVE_DIR=$TB_GDRIVE_DIR
-    else
-        GDRIVE_DIR=$INPUT_GDRIVE_DIR
-    fi
-
     function rcloneConnect {
-        read -p "Provide your Rclone remote name $([ ! -z "$TB_RCLONE_NAME" ] && echo [$TB_RCLONE_NAME] || echo [$RCLONE_NAME]): " INPUT_RCLONE_NAME;
+        read -p "Provide your Rclone remote name (0 to store backup locally) $([ ! -z "$TB_RCLONE_NAME" ] && echo [$TB_RCLONE_NAME] || echo [$RCLONE_NAME]): " INPUT_RCLONE_NAME;
         if [ -z "$INPUT_RCLONE_NAME" ]; then
             [ ! -z "$TB_RCLONE_NAME" ] && RCLONE_NAME=$TB_RCLONE_NAME
         else
@@ -112,12 +105,23 @@ TEMP_DIR=/tmp/tb-backup" \
 
     rcloneConnect
 
-    until rclone ls $RCLONE_NAME: --max-depth 1; do
-        _e "\n  Can not connect Google Drive, please check your information.\n" "error";
-        rcloneConnect
-    done
+    if [ $RCLONE_NAME = "0" ]; then
+        _e "\n  We will store your backup locally.\n" "success";
+    else
+        until rclone ls $RCLONE_NAME: --max-depth 1; do
+            _e "\n  Can not connect Google Drive, please check your information.\n" "error";
+            rcloneConnect
+        done
 
-    _e "\n  Connect to Google Drive successfully\n" "success";
+         _e "\n  Connect to Google Drive successfully\n" "success";
+
+        read -p "Provide your Google Drive backup directory $([ ! -z "$TB_GDRIVE_DIR" ] && echo [$TB_GDRIVE_DIR] || echo [$GDRIVE_DIR]): " INPUT_GDRIVE_DIR;
+        if [ -z "$INPUT_GDRIVE_DIR" ]; then
+            [ ! -z "$TB_GDRIVE_DIR" ] && GDRIVE_DIR=$TB_GDRIVE_DIR
+        else
+            GDRIVE_DIR=$INPUT_GDRIVE_DIR
+        fi
+    fi
 
     read -p "Provide your temporary backup path $([ ! -z "$TB_TEMP_DIR" ] && echo [$TB_TEMP_DIR] || echo [$TEMP_DIR]): " INPUT_TEMP_DIR;
     if [ -z "$INPUT_TEMP_DIR" ]; then
