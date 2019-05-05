@@ -48,9 +48,9 @@ function setup {
         echo \
 "SOURCE_DIR=/var/www
 MYSQL_USER=root
-MYSQL_PASSWORD=$(cat /etc/mysql/conf.d/my.cnf | awk 'BEGIN{a=1}{if($1=="password"){print $3}}')
+MYSQL_PASSWORD=$(cat /etc/mysql/conf.d/my.cnf | awk '{if($1=="password"){print $3}}')
 ARCHIVE_PASSWORD=tbbackup
-GDRIVE_DIR=Backup/Rclone/$(hostname)-$(ip route get 8.8.8.8| head -1 | awk '{print $7}')
+GDRIVE_DIR=Backup/Rclone/$(hostname)-$(ip route get 8.8.8.8 | head -1 | awk '{print $7}')
 RCLONE_NAME=0
 TEMP_DIR=/tmp/tb-backup" \
         > .env.default
