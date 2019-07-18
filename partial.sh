@@ -25,7 +25,7 @@ for D in /var/www/*; do
     if [ -d "${D}" ]; then
         domain=${D##*/}
         echo "-- Starting backup "$domain;
-        LC_ALL=en_US.UTF-8 7z a -m0=lzma2 -mx=4 -y -mfb=64 -md=32m -ms=on -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/$domain.7z /var/www/$domain/* -xr0!backup -xr!cache -xr!*.webp
+        LC_ALL=en_US.UTF-8 7z a -m0=lzma2 -mx=9 -y -mfb=64 -md=32m -ms=on -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/$domain.7z /var/www/$domain/* -xr0!backup -xr!cache -xr!*.webp -xr!node_modules
         /usr/sbin/rclone move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP" >> /var/log/rclone.log 2>&1
         rm $BACKUP_DIR/$domain.7z
         echo "-- Backup done "$domain;
@@ -36,9 +36,9 @@ echo '-------------------------------------';
 
 ################# Nginx Configuration Backup #################
 echo "Starting Backup Nginx Configuration";
-rsync -zarv --exclude .git/ --exclude .gitignore --exclude TODO /etc/nginx/ $BACKUP_DIR/nginx/ && 7z a -m0=lzma2 -mx=9 -y -mfb=64 -md=32m -ms=on -sdel -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/nginx.7z $BACKUP_DIR/nginx/*
-7z a -m0=lzma2 -mx=9 -y -mfb=64 -md=32m -ms=on -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/php.7z /etc/php
-7z a -m0=lzma2 -mx=9 -y -mfb=64 -md=32m -ms=on -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/letsencrypt.7z /etc/letsencrypt
+7z a -m0=lzma2 -mx=9 -y -mfb=64 -md=32m -ms=on -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/nginx.7z /etc/nginx/* -xr!.git -xr!.gitignore
+7z a -m0=lzma2 -mx=9 -y -mfb=64 -md=32m -ms=on -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/php.7z /etc/php/*
+7z a -m0=lzma2 -mx=9 -y -mfb=64 -md=32m -ms=on -p"$ARCHIVE_PASSWORD" -r $BACKUP_DIR/letsencrypt.7z /etc/letsencrypt/*
 /usr/sbin/rclone move $BACKUP_DIR "$REMOTE:$SERVER_NAME/$TIMESTAMP/others" >> /var/log/rclone.log 2>&1
 echo "Finished Backup Nginx Configuration";
 echo '-------------------------------------';
