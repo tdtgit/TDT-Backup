@@ -31,22 +31,49 @@ function _en {
 function _p {
     eval $1 & PID=$!
 
-    _en "  $2" "$3"
+    _en "  $2 ." "$3"
     while kill -0 $PID 2> /dev/null; do 
         _en "."
         sleep 2
     done
 }
 
+function pre_run_check {
+    _e "\n\n===================================\nPre-run check\n"
+
+    PROGRAM_LIST="mysql mysqldump zip rclone"
+
+    for program in $PROGRAM_LIST
+    do
+        if ! [ -x "$(command -v $program)" ]; then
+            _e "Error: $program not installed." "warning"
+            _p "apt install -y $program &> /dev/null" "Installing $program" "success"
+            _e "Done" "success"
+        fi
+    done
+
+    _en "\nDone. All program is installed."
+    _e "\n===================================";
+}
+
 function setup {
     # TODO: advanced options: temporary backup dir,...
+
+    if [[ $EUID -ne 0 ]]; then
+        echo "This script must be run as root" 
+        exit 1
+    fi
+
+    pre_run_check
+
     source .env &>/dev/null || _e "\n\nWelcome! New setup detected. Please provide as much information as you can:\n\n" "success"
 
-    # If is first run
+    # If first run
     if [ ! -f .env.default ]; then
         # Try to self-help
         echo \
 "SOURCE_DIR=/var/www
+MYSQL_HOST=localhost
 MYSQL_USER=root
 MYSQL_PASSWORD=$(cat /etc/mysql/conf.d/my.cnf | awk '{if($1=="password"){print $3}}')
 ARCHIVE_PASSWORD=tbbackup
@@ -78,7 +105,7 @@ TEMP_DIR=/tmp/tb-backup" \
         if [ -z "$CONTINUE" ]; then
             [ ! -z "$SOURCE_DIR" ] && CONTINUE="Y"
         fi
-        until [ $CONTINUE = "Y" ]; do
+        until [ $CONTINUE = "Y" ] || [ $CONTINUE = "y" ] ; do
             _e "\n";
             listSites;
         done
@@ -88,6 +115,13 @@ TEMP_DIR=/tmp/tb-backup" \
 
     function mysqlConnect {
         _e "\n"
+        read -ep "Provide your MySQL host $([ ! -z "$TB_MYSQL_HOST" ] && echo [$TB_MYSQL_HOST] || echo [$MYSQL_HOST]): " INPUT_MYSQL_HOST;
+        if [ -z "$INPUT_MYSQL_HOST" ]; then
+            [ ! -z "$TB_MYSQL_HOST" ] && MYSQL_HOST=$TB_MYSQL_HOST
+        else
+            MYSQL_HOST=$INPUT_MYSQL_HOST
+        fi
+
         read -ep "Provide your MySQL username $([ ! -z "$TB_MYSQL_USER" ] && echo [$TB_MYSQL_USER] || echo [$MYSQL_USER]): " INPUT_MYSQL_USER;
         if [ -z "$INPUT_MYSQL_USER" ]; then
             [ ! -z "$TB_MYSQL_USER" ] && MYSQL_USER=$TB_MYSQL_USER
@@ -105,7 +139,7 @@ TEMP_DIR=/tmp/tb-backup" \
 
     mysqlConnect
 
-    until mysql -u $MYSQL_USER -p$MYSQL_PASSWORD -e ";" ; do
+    until mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD -e ";" ; do
         _e "Can not connect MySQL, please check your information." "error";
         mysqlConnect
     done
@@ -162,6 +196,7 @@ TEMP_DIR=/tmp/tb-backup" \
 
     echo \
 "$(echo TB_SOURCE_DIR)=$SOURCE_DIR
+$(echo TB_MYSQL_HOST)=$MYSQL_HOST
 $(echo TB_MYSQL_USER)=$MYSQL_USER
 $(echo TB_MYSQL_PASSWORD)=$MYSQL_PASSWORD
 $(echo TB_ARCHIVE_PASSWORD)=$ARCHIVE_PASSWORD
@@ -176,12 +211,19 @@ $(echo TB_TEMP_DIR)=$TEMP_DIR" \
 function run {
     source .env
 
+    pre_run_check
+
     if [ -z "$TB_TEMP_DIR" ]; then
         TB_TEMP_DIR=/tmp/tb-backup/
     fi
 
     if [ -z "$TB_GDRIVE_DIR" ]; then
         echo "Provide your backup directory in Google Drive"
+        exit 1
+    fi
+
+    if [ -z "$TB_MYSQL_HOST" ]; then
+        echo "Provide your MySQL host"
         exit 1
     fi
 
@@ -217,12 +259,30 @@ function run {
     for db in $databases; do
         # TODO progress bar
         _e "\n- $db: ";
-        _p "mysqldump --force --opt --user=${TB_MYSQL_USER} -p${TB_MYSQL_PASSWORD} --databases ${db} | 7z a -si -m0=lzma -mx=1 ${TB_ARCHIVE_PASSWORD} ${db}.sql.7z > /dev/null" "Processing" "success"
-        _p "rclone move $db.sql.7z $TB_RCLONE_NAME:$TB_GDRIVE_DIR/$TIMESTAMP/databases" "Uploading" "success"
+        _p "mysqldump --force --opt -h ${TB_MYSQL_HOST} -u ${TB_MYSQL_USER} -p${TB_MYSQL_PASSWORD} --databases ${db} | 7z a -si -m0=lzma2 -mx=9 ${TB_ARCHIVE_PASSWORD} ${db}.sql.7z &> /dev/null" "Processing" "success"
+        if [ $TB_RCLONE_NAME != "0" ]; then      
+            _p "rclone move $db.sql.7z $TB_RCLONE_NAME:$TB_GDRIVE_DIR/$TIMESTAMP/databases" "Uploading" "success"
+        fi
         _en "  Done" "success"
     done
 
     echo -e "\n\nFinished Backup Database";
+    echo -e '===================================';
+
+    ################# Source code Backup #################
+    echo -e '\n\n===================================';
+    echo "Starting Backup Sourcecode";
+
+    for site in $(ls /var/www/); do
+        # TODO progress bar
+        _e "\n- $site: ";
+        _p "7z a -m0=lzma2 -mx=3 -r $site.7z /var/www/$site/* -xr0!backup -xr!cache -xr!*.webp -xr!node_modules &> /dev/null" "Zipping" "success"
+        if [ $TB_RCLONE_NAME != "0" ]; then      
+            _p "rclone move $site.7z $TB_RCLONE_NAME:$TB_GDRIVE_DIR/$TIMESTAMP/source" "Uploading" "success"
+        fi
+    done
+
+    echo -e "\n\nFinished Backup Sourcecode";
     echo -e '===================================';
 }
 
